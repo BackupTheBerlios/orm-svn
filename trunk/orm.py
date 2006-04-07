@@ -72,6 +72,8 @@
 # for the 2006-03-21 podcast
 #*****************************************************************************
 
+__version__ = "orm 0.1"
+
 import sys
 import os
 import urllib
