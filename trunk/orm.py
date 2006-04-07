@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
+# -*- python -*-
+#
+#  $Rev::               $:  Revision of last commit
+#  $Author::            $:  Author of last commit
+#  $Date::              $:  Date of last commit
+#
 #*****************************************************************************
 #
 #  Copyright (c) 2006 Benjamin Sergeant (bsergean at gmail dot com)
@@ -21,9 +27,6 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 #*****************************************************************************
-
-__revision__ = '$Id: orm.py,v 1.12 2006/04/07 01:31:59 bsergean Exp $  (C) 2006 GPL'
-__author__ = 'Benjamin Sergeant'
 
 #*****************************************************************************
 # standalone podcast downloader
