@@ -2,9 +2,9 @@
 # -*- coding: iso-8859-1 -*-
 # -*- python -*-
 #
-#  $Rev::                                $:  Revision of last commit
-#  $Author::                             $:  Author of last commit
-#  $Date::                               $:  Date of last commit
+#  $Rev::                                          $:  Revision of last commit
+#  $Author::                                       $:  Author of last commit
+#  $Date::                                         $:  Date of last commit
 #
 #*****************************************************************************
 #
@@ -421,7 +421,7 @@ if __name__ == "__main__":
 						    podurl = v,
 						    verbose = verbose)
 			downloader.download()
-			
+
 		if verbose: print 'nul. completement nul'
 
 	except (KeyboardInterrupt):
