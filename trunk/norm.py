@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- python -*-
 
+# plug orm to a cplay-based curses interface
+
 __version__ = "norm 0.0"
 
 from types import *
