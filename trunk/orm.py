@@ -354,10 +354,9 @@ class SettingsError(Exception):
 class settings:
 
 	def __init__(self):
-
-		# we need to find from where we were started
-		# we cheat for now, just take the hard coded path
-		# configFilename = '/home/bsergean/src/Prog/orm/trunk/conf.py'
+                # fixme: Need to fix this for windows
+                if os.platform == 'win32':
+                        _err_exit('configFilename default path not handled under Windows')
 		configFilename = os.path.expanduser('~/.orm')
 		if not os.path.exists(configFilename):
 			raise SettingsError, 'no ~/.orm file: execute make install from the orm install root directory'
