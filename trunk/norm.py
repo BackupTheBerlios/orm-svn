@@ -382,10 +382,9 @@ class DownloadListWindow(ListWindow):
         self.settings = orm.settings()
         self.downloaders = []
 
-        for k, v in self.settings.podcasts.iteritems():
-            self.downloaders.append(orm.podcastHandler(filenamePrefix = k,
-                                                       podurl = v,
-                                                       verbose = False))
+        for f, url in self.settings.podcasts.iteritems():
+            self.downloaders.append(orm.podcastHandler(self.settings.prefix,
+                                                       f, url, verbose))
     # HERE
     def toggleDownload(self):
 

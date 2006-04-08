@@ -368,9 +368,11 @@ class settings:
 		
 		confmodule = importCode(code, 'conf')
 
-		if not hasattr(confmodule,'ormMainDir') or \
-		       not hasattr(confmodule,'ormPodcastSettings'):
-			raise SettingsError, 'Corrupted ~/.orm file: repare or get a new one by executing make install from the orm install root directory'
+		if not hasattr(confmodule,'ormMainDir'):
+			raise SettingsError, 'missing ormMainDir variable in the ~/.orm file'
+                    
+                if not hasattr(confmodule,'ormPodcastSettings'):
+			raise SettingsError, 'missing ormPodcastSettings variable in the ~/.orm file'
 
 		self.ormMainDir = confmodule.ormMainDir
 		self.ormPodcastSettings = confmodule.ormPodcastSettings
