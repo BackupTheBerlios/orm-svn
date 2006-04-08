@@ -2,9 +2,10 @@
 # -*- coding: iso-8859-1 -*-
 # -*- python -*-
 #
-#  $Rev::                                          $:  Revision of last commit
-#  $Author::                                       $:  Author of last commit
-#  $Date::                                         $:  Date of last commit
+#  $HeadURL$
+#  $Rev$
+#  $Author$
+#  $Date$
 #
 #*****************************************************************************
 #
@@ -49,27 +50,6 @@
 # Bugs:
 # - When download is canceled by KeyInterupt the message 'filename' saved is
 #   printed
-#*****************************************************************************
-
-#*****************************************************************************
-# settings format: <filename prefix>,<url>
-# <filename prefix> will be used to create the dir where each podcast are put
-# ormMainDir is the prefix dir where the podcast specific dirs are created
-#
-# You can use a sharp (#) to comment a line
-#
-# !! Warning !! - dont use comma (',') since it is the field separator
-#               - dont add a backslash escape sequence for special characters
-#                 if you have space in the ormMainDir directory
-# Example:
-#
-# ormMainDir = '/home/mp3'
-# ormPodcastSettings = """
-# orm,http://podcast.rtl.fr/onrefaitlematch.xml
-# """
-#
-# files will be created as /home/mp3/orm/orm-2006-03-21.mp3
-# for the 2006-03-21 podcast
 #*****************************************************************************
 
 __version__ = "orm 0.1"
@@ -299,8 +279,9 @@ class dateSortedMp3Lister(SGMLParser):
 
 class podcastHandler:
 
-	def __init__(self, filenamePrefix, podurl, verbose = True):
+	def __init__(self, prefix, filenamePrefix, podurl, verbose = True):
 		self.verbose = verbose
+		self.prefix = prefix
 		self.filenamePrefix = filenamePrefix
 		self.podurl = podurl
 		self.error = False
@@ -342,7 +323,7 @@ class podcastHandler:
 	def downloadContent(self):
 		if self.error: return
 		
-		dirName = os.path.join(settings.ormMainDir, self.filenamePrefix)
+		dirName = os.path.join(self.prefix, self.filenamePrefix)
 		if self.verbose: print 'downloading[%s] %s\n' % (self.filenamePrefix, self.parser.url)
 		output = self.filenamePrefix + '-' + time.strftime('%Y-%m-%d', self.parser.lastDate) + '.mp3'
 		try:
@@ -360,30 +341,41 @@ class podcastHandler:
 			self.downloadContent()
 			self.htmlFD.close()
 
+def importCode(code, name):
+	import new
+	module = new.module(name)
+	exec code in module.__dict__
+	return module
+
+# FIXME: minor case class name
+class SettingsError(Exception):
+	pass
+
 class settings:
-        ormMainDir = '/home/mp3'
-	ormMainDir = '/perso/mp3/Divers/Divers - Divers'
-	ormPodcastSettings = """
 
-orm,http://podcast.rtl.fr/onrefaitlematch.xml
-masque,http://radiofrance-podcast.net/podcast/rss_14007.xml
-coffe,http://radiofrance-podcast.net/podcast/rss_10031.xml
-#fouduroi,http://radiofrance-podcast.net/podcast/rss_10048.xml
-#leplustot,http://radiofrance-podcast.net/podcast/rss_10030.xml
-#
-#orm2,http://podcast.rtl.fr/onrefaitlematch.xml
-#masque2,http://radiofrance-podcast.net/podcast/rss_14007.xml
-#coffe2,http://radiofrance-podcast.net/podcast/rss_10031.xml
-#fouduroi2,http://radiofrance-podcast.net/podcast/rss_10048.xml
-#leplustot2,http://radiofrance-podcast.net/podcast/rss_10030.xml
-
-test,http://marge1/~bsergean/pod.xml
-test2,http://marge1/~bsergean/pod2.xml
-test3,http://marge1/~bsergean/pod3.xml
-"""
-	
 	def __init__(self):
-		settingsFD = StringIO.StringIO(settings.ormPodcastSettings)
+
+		# we need to find from where we were started
+		# we cheat for now, just take the hard coded path
+		# configFilename = '/home/bsergean/src/Prog/orm/trunk/conf.py'
+		configFilename = os.path.expanduser('~/.orm')
+		if not os.path.exists(configFilename):
+			raise SettingsError, 'no ~/.orm file: execute make install from the orm install root directory'
+				
+		code = open(configFilename).read() # FIXME: error handling
+		if not len(code):
+			raise SettingsError, 'Empty ~/.orm file: execute make install from the orm install root directory'
+		
+		confmodule = importCode(code, 'conf')
+
+		if not hasattr(confmodule,'ormMainDir') or \
+		       not hasattr(confmodule,'ormPodcastSettings'):
+			raise SettingsError, 'Corrupted ~/.orm file: repare or get a new one by executing make install from the orm install root directory'
+
+		self.ormMainDir = confmodule.ormMainDir
+		self.ormPodcastSettings = confmodule.ormPodcastSettings
+
+		settingsFD = StringIO.StringIO(self.ormPodcastSettings)
 
 		self.podcasts = {}
 		for line in settingsFD.readlines():
@@ -397,7 +389,7 @@ test3,http://marge1/~bsergean/pod3.xml
 			podurl = tokens[1]
 
 			# create the podcast dir
-			dirName = os.path.join(settings.ormMainDir, filenamePrefix)
+			dirName = os.path.join(self.ormMainDir, filenamePrefix)
 
 			if not os.path.exists(dirName):
 				try:
@@ -416,13 +408,18 @@ if __name__ == "__main__":
 		if verbose: print 'Micoud est nul'
 
 		s = settings()
+		
 		for k, v in s.podcasts.iteritems():
-			downloader = podcastHandler(filenamePrefix = k,
+			downloader = podcastHandler(prefix = s.ormMainDir,
+				                    filenamePrefix = k,
 						    podurl = v,
 						    verbose = verbose)
 			downloader.download()
 
 		if verbose: print 'nul. completement nul'
+
+	except SettingsError, e:
+		_err_exit('Error: %s\n' % (e))
 
 	except (KeyboardInterrupt):
 		_err_exit("\nMais pourquoi. Pourquoi ?\n")
