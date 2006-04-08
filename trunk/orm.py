@@ -368,40 +368,14 @@ class settings:
 		
 		confmodule = importCode(code, 'conf')
 
-		if not hasattr(confmodule,'ormMainDir'):
-			raise SettingsError, 'missing ormMainDir variable in the ~/.orm file'
+		if not hasattr(confmodule,'prefix'):
+			raise SettingsError, 'missing prefix variable in the ~/.orm file'
                     
-                if not hasattr(confmodule,'ormPodcastSettings'):
-			raise SettingsError, 'missing ormPodcastSettings variable in the ~/.orm file'
+                if not hasattr(confmodule,'podcasts'):
+			raise SettingsError, 'missing podcasts variable in the ~/.orm file'
 
-		self.ormMainDir = confmodule.ormMainDir
-		self.ormPodcastSettings = confmodule.ormPodcastSettings
-
-		settingsFD = StringIO.StringIO(self.ormPodcastSettings)
-
-		self.podcasts = {}
-		for line in settingsFD.readlines():
-			line = line.strip()
-			if not len(line) or line.startswith('#'):
-				continue
-			tokens = line.split(',')
-			if len(tokens) != 2:
-				continue
-			filenamePrefix = tokens[0]
-			podurl = tokens[1]
-
-			# create the podcast dir
-			dirName = os.path.join(self.ormMainDir, filenamePrefix)
-
-			if not os.path.exists(dirName):
-				try:
-					os.makedirs(dirName)
-				except OSError, error:
-					_err_exit("%s\nCannot create %s: Exiting\n" % (error, dirName))
-
-			self.podcasts[filenamePrefix] = podurl
-
-		settingsFD.close()
+		self.prefix = confmodule.prefix
+		self.podcasts = confmodule.podcasts
 
 if __name__ == "__main__":
 	try:
@@ -411,11 +385,17 @@ if __name__ == "__main__":
 
 		s = settings()
 		
-		for k, v in s.podcasts.iteritems():
-			downloader = podcastHandler(prefix = s.ormMainDir,
-				                    filenamePrefix = k,
-						    podurl = v,
-						    verbose = verbose)
+		for f, url in s.podcasts.iteritems():
+			# create the podcast dir
+			dirName = os.path.join(s.prefix, f)
+
+			if not os.path.exists(dirName):
+				try:
+					os.makedirs(dirName)
+				except OSError, error:
+					_err_exit("%s\nCannot create %s: Exiting\n" % (error, dirName))
+
+			downloader = podcastHandler(s.prefix, f, url, verbose)
 			downloader.download()
 
 		if verbose: print 'nul. completement nul'
