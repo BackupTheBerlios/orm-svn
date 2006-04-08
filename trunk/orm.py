@@ -2,7 +2,7 @@
 # -*- coding: iso-8859-1 -*-
 # -*- python -*-
 #
-#  $URL$
+#  $Id$
 #  $Rev$
 #  $Author$
 #  $Date$
