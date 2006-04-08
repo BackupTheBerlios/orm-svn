@@ -2,9 +2,10 @@
 # -*- coding: iso-8859-1 -*-
 # -*- python -*-
 #
-#  $Rev::               $:  Revision of last commit
-#  $Author::            $:  Author of last commit
-#  $Date::              $:  Date of last commit
+#  File: norm.py
+#  $Rev$
+#  $Author$
+#  $Date$
 #
 #*****************************************************************************
 #

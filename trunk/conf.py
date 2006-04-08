@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: iso-8859-1 -*-
+# -*- python -*-
+#
+#  File: norm.py
+#  $Rev: 13 $
+#  $Author: bsergean $
+#  $Date: 2006-04-07 23:02:21 -0700 (Fri, 07 Apr 2006) $
+#
 #*****************************************************************************
 # prefix is the directory prefix for the future downloaded media
 # 
