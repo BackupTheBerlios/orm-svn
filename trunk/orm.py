@@ -286,7 +286,6 @@ class podcastHandler:
 		self.podurl = podurl
 		self.error = False
 		self.errorMsg = ""
-		self.getPodcastAndPreprocessIt()
 
 	def getPodcastAndPreprocessIt(self):
 		"""
@@ -336,6 +335,7 @@ class podcastHandler:
 			if self.verbose: print self.errorMsg
 
 	def download(self):
+		self.getPodcastAndPreprocessIt()
 		if not self.error and not self.htmlFD.closed:
 			self.parsePC()
 			self.downloadContent()
@@ -355,7 +355,7 @@ class settings:
 
 	def __init__(self):
                 # fixme: Need to fix this for windows
-                if os.platform == 'win32':
+                if sys.platform == 'win32':
                         _err_exit('configFilename default path not handled under Windows')
 		configFilename = os.path.expanduser('~/.orm')
 		if not os.path.exists(configFilename):

@@ -375,7 +375,6 @@ class DownloadListWindow(ListWindow):
 
     def __init__(self, parent):
         ListWindow.__init__(self, parent)
-        self.keymap.bind('t', self.toto, ())
         self.keymap.bind('l', self.listPodCasts, ())
         self.keymap.bind(['\n', curses.KEY_ENTER],
                          self.toggleDownload, ())
@@ -385,17 +384,20 @@ class DownloadListWindow(ListWindow):
 
         for f, url in self.settings.podcasts.iteritems():
             self.downloaders.append(orm.podcastHandler(self.settings.prefix,
-                                                       f, url, verbose))
+                                                       f, url, False))
     # HERE
     def toggleDownload(self):
-
-        self.buffer[self.bufptr] = "downloading ..."
-        self.downloaders[self.bufptr].download()
+        downloader = self.downloaders[self.bufptr]
+        app.status('Currently downloading %s' % (downloader.filenamePrefix))
+        self.buffer[self.bufptr] = "fetch podcast and read it"
+        self.updateWin()
+        downloader.download()
         self.buffer[self.bufptr] = "downloaded !!"
-        self.parent.update_title()
-        self.update()
+        self.updateWin()
 
-    def toto(): pass
+    def updateWin(self):
+        self.parent.update_title()
+        self.update()               
 
     def get_title(self):
         self.name = _("DownloadListWindow: ")
