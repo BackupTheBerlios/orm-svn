@@ -40,6 +40,12 @@
 # - dont create anything on your disk apart from the downloaded podcasts
 #
 # Todo:
+# - plug to GNUPod
+# bash-3.00$ ORMDIR=/tmp python orm.py 2> /dev/null
+# notnew     :/tmp/test/test-2006-03-21.mp3
+#
+# To import the new podcast:
+
 # - error handling
 # - detect extension file (.aac ?) for creating the correct filename
 # - dont work if there are several podcast the same day
@@ -65,6 +71,11 @@ import urllib2
 try: import locale; locale.setlocale(locale.LC_ALL, "")
 except: pass
 
+# FIXME: windows compatibility
+outfd = sys.stderr
+def log(msg):
+	outfd.write(msg + '\n')
+
 # see http://www.nedbatchelder.com/blog/200410.html#e20041003T074926
 def _functionId(nFramesUp):
         """ Create a string naming the function n frames up on the stack.
@@ -82,9 +93,9 @@ def complicatedFunctionFromTheFuture():
 
 def _err_exit(msg):
 	""" to exit from program on an error with a formated message """
-	sys.stderr.write("%s: %s\nFrom %s\n" % (os.path.basename(sys.argv[0]),
-					      msg,
-					      _functionId(1)))
+	log("%s: %s\nFrom %s" % (os.path.basename(sys.argv[0]),
+				 msg,
+				 _functionId(1)))
 	sys.exit(1)
 
 class UrlCheckError(Exception):
@@ -92,7 +103,7 @@ class UrlCheckError(Exception):
 
 def checkUrl(url, verbose):
 	""" http://www.voidspace.org.uk/python/articles/urllib2.shtml """
-	if verbose: print 'checking url ...', url
+	if verbose: log('checking url ...%s' % url)
 
 	if not len(url):
 		raise UrlCheckError, 'checkUrl: void url' 
@@ -101,10 +112,10 @@ def checkUrl(url, verbose):
 	try:
 		handle = urllib2.urlopen(req)
 	except IOError:
-		if verbose: print '... Error'
-		raise UrlCheckError, 'checkUrl ' + url + ' : the requested url was not found'
+		if verbose: log('... Error')
+		raise UrlCheckError, 'checkUrl ' + url + ' : the requested url was not found' 
 	else:
-		if verbose: print '... OK'
+		if verbose: log('... OK')
 		handle.close()
 
 def format_number(number, SI=0, space=' '):
@@ -184,12 +195,12 @@ def urlGrab(url, dlFile, progressfunction = transferProgressHook, verbose = True
 				loop = 0
 				# FIXME: looks like we never go
 				# here but don't download a file twice either ...
-				if verbose: print "File already downloaded"
+				if verbose: log("File already downloaded")
 		else:
-			if verbose: print 'download complete'
+			if verbose: log('download complete')
 			webPage.close()
 			outputFile.close()
-			return
+			return 'old'
 
 		# actually download the stuff
 		totalSize = existSize + remoteFileSize
@@ -208,6 +219,7 @@ def urlGrab(url, dlFile, progressfunction = transferProgressHook, verbose = True
 	else:
 		webPage.close()
 		outputFile.close()
+		return 'new'
 
 def dateObjFromString(text):
 	""" http://pleac.sourceforge.net/pleac_python/datesandtimes.html """
@@ -307,7 +319,7 @@ class podcastHandler:
 		except UrlCheckError, error:
 			self.error = True
 			self.errorMsg = '\nUrl check error %s\n' % (error)
-			if self.verbose: print self.errorMsg
+			if self.verbose: log(self.errorMsg)
 
 	def parsePC(self):
 		"""
@@ -323,16 +335,18 @@ class podcastHandler:
 		if self.error: return
 		
 		dirName = os.path.join(self.prefix, self.filenamePrefix)
-		if self.verbose: print 'downloading[%s] %s\n' % (self.filenamePrefix, self.parser.url)
+		if self.verbose: log('downloading[%s] %s\n' % (self.filenamePrefix, self.parser.url))
 		output = self.filenamePrefix + '-' + time.strftime('%Y-%m-%d', self.parser.lastDate) + '.mp3'
+		self.absoutput = os.path.join(dirName, output)
 		try:
-			urlGrab(self.parser.url,
-				os.path.join(dirName, output),
-				transferProgressHook, self.verbose)
+			self.absoutput = '%s:%s' % (urlGrab(self.parser.url, self.absoutput,
+							    transferProgressHook, self.verbose),
+						    self.absoutput)
+			
 		except UrlGrabError, error:
 			self.error = False # leave a chance
 			self.errorMsg = error
-			if self.verbose: print self.errorMsg
+			if self.verbose: log(self.errorMsg)
 
 	def download(self):
 		self.getPodcastAndPreprocessIt()
@@ -380,9 +394,9 @@ if __name__ == "__main__":
 	try:
 		# complicatedFunctionFromTheFuture()
 		verbose = True
-		if verbose: print 'Micoud est nul'
-
+		if verbose: log('Micoud est nul')
 		s = settings()
+		if verbose: log('orm prefix: %s' % s.prefix)
 		
 		for f, url in s.podcasts.iteritems():
 			# create the podcast dir
@@ -392,12 +406,13 @@ if __name__ == "__main__":
 				try:
 					os.makedirs(dirName)
 				except OSError, error:
-					_err_exit("%s\nCannot create %s: Exiting\n" % (error, dirName))
+					raise SettingsError, "%s\nCannot create %s" % (error, dirName)
 
 			downloader = podcastHandler(s.prefix, f, url, verbose)
 			downloader.download()
+			print downloader.absoutput
 
-		if verbose: print 'nul. completement nul'
+		if verbose: log('\nnul. completement nul')
 
 	except SettingsError, e:
 		_err_exit('Error: %s\n' % (e))

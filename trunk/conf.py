@@ -9,6 +9,8 @@
 #
 #*****************************************************************************
 # prefix is the directory prefix for the future downloaded media
+# it can also be set with the ORMDIR env variable
+# with bash: export ORMPREFIX=/home/mp3
 # 
 # settings format: <filename prefix>='<url>',
 # <filename prefix> will be used to create the dir where each podcast are put
@@ -38,6 +40,8 @@ elif sys.platform == 'win32':
 else: # Unix ?
     prefix = os.path.expanduser('~')
 
+prefix = os.environ.get('ORMDIR', prefix)
+
 ########
 #
 #  !!!! Dont touch anything before above :) !!!!
@@ -50,13 +54,13 @@ else: # Unix ?
 
 # The main parameter
 podcasts = dict(
-orm='http://podcast.rtl.fr/onrefaitlematch.xml',
-masque='http://radiofrance-podcast.net/podcast/rss_14007.xml',
-coffe='http://radiofrance-podcast.net/podcast/rss_10031.xml',
-fouduroi='http://radiofrance-podcast.net/podcast/rss_10048.xml',
-leplustot='http://radiofrance-podcast.net/podcast/rss_10030.xml',
+#orm='http://podcast.rtl.fr/onrefaitlematch.xml',
+#masque='http://radiofrance-podcast.net/podcast/rss_14007.xml',
+#coffe='http://radiofrance-podcast.net/podcast/rss_10031.xml',
+#fouduroi='http://radiofrance-podcast.net/podcast/rss_10048.xml',
+#leplustot='http://radiofrance-podcast.net/podcast/rss_10030.xml',
 
-#test='http://marge1/~bsergean/pod.xml',
+test='http://marge1/~bsergean/pod.xml',
 #test2='http://marge1/~bsergean/pod2.xml',
 #test3='http://marge1/~bsergean/pod3.xml',
 )
