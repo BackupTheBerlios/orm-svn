@@ -410,7 +410,8 @@ if __name__ == "__main__":
 
 			downloader = podcastHandler(s.prefix, f, url, verbose)
 			downloader.download()
-			print downloader.absoutput
+			if not downloader.error:
+				print downloader.absoutput
 
 		if verbose: log('\nnul. completement nul')
 
