@@ -153,11 +153,11 @@ def format_number(number, SI=0, space=' '):
 
 def transferProgressHook(curbytes, total):
 	if curbytes > total:
-		sys.stdout.write('\rProgress: %s/%s\r' % (format_number(total), format_number(total)))
+		sys.stderr.write('\rProgress: %s/%s\r' % (format_number(total), format_number(total)))
 	else:
-		sys.stdout.write('\rProgress: %s/%s' % (format_number(curbytes), format_number(total)))
-		sys.stdout.flush()
-		sys.stdout.write('\r' + ' ' * 80)
+		sys.stderr.write('\rProgress: %s/%s' % (format_number(curbytes), format_number(total)))
+		sys.stderr.flush()
+		sys.stderr.write('\r' + ' ' * 80)
 
 class myURLOpener(urllib.FancyURLopener):
     """Create sub-class in order to overide error 206.  This error means a
