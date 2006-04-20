@@ -46,6 +46,8 @@
 #
 # To import the new podcast:
 
+# - multiple date parsing schemes
+# - write file tag
 # - error handling
 # - detect extension file (.aac ?) for creating the correct filename
 # - dont work if there are several podcast the same day
