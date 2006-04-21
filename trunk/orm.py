@@ -223,12 +223,25 @@ def urlGrab(url, dlFile, progressfunction = transferProgressHook, verbose = True
 		outputFile.close()
 		return 'new'
 
+class dateObjFromStringError: pass
 def dateObjFromString(text):
 	""" http://pleac.sourceforge.net/pleac_python/datesandtimes.html """
-	# we get rid of the last token which differ depending on podcasts
-	# and give the rest to strptime
-	return time.strptime((' ').join(text.split()[0:-1]), '%a, %d %b %Y %H:%M:%S')
+        formats = [
+        '%A %d %B %Y %Hh%M', # equipetv
+        '%a, %d %b %Y %H:%M:%S PDT', # orm
+        '%a, %d %b %Y %H:%M:%S +0200', # radio france
+        ]
+        for f in formats:
+            try: 
+	        timeobject = time.strptime(text, f)
+                parsed = True
+            except (ValueError): pass
+        
+        if not parsed:
+            raise dateObjFromStringError
 
+        return timeobject
+        
 class dateSortedMp3Lister(SGMLParser):
 	"""
 	The xml file is an <item> tag flat sibling
@@ -268,6 +281,7 @@ class dateSortedMp3Lister(SGMLParser):
 		
 		self.url = ''
 		self.curUrl = ''
+                self.contentType = ''
 
 	def start_pubdate(self, attrs):
 		self.handlePubDate = True
@@ -279,7 +293,8 @@ class dateSortedMp3Lister(SGMLParser):
 		for attr in attrs:
 			if attr[0] == "url":
 				self.curUrl = attr[1]
-				break
+                        if attr[0] == 'type':
+                                self.contentType = attr[1]
 
 	def start_item(self, attrs): pass
 	def end_item(self):
@@ -289,8 +304,10 @@ class dateSortedMp3Lister(SGMLParser):
 
 	def handle_data(self, text):
 		if self.handlePubDate:
-			self.curLastDate = dateObjFromString(text)
-
+                        try:
+			        self.curLastDate = dateObjFromString(text)
+                        except (dateObjFromStringError):
+                                self.curLastDate = dateSortedMp3Lister.DC
 class podcastHandler:
 
 	def __init__(self, prefix, filenamePrefix, podurl, verbose = True):
@@ -336,9 +353,16 @@ class podcastHandler:
 	def downloadContent(self):
 		if self.error: return
 		
+                ext = '.mp3'
+                if self.parser.contentType == 'audio/mpeg':
+                        ext = '.mp3'
+                if self.parser.contentType == 'video/mp4':
+                        ext = '.mp4'
+                
 		dirName = os.path.join(self.prefix, self.filenamePrefix)
 		if self.verbose: log('downloading[%s] %s\n' % (self.filenamePrefix, self.parser.url))
-		output = self.filenamePrefix + '-' + time.strftime('%Y-%m-%d', self.parser.lastDate) + '.mp3'
+		output = self.filenamePrefix + '-' + time.strftime('%Y-%m-%d',
+                self.parser.lastDate) + ext
 		self.absoutput = os.path.join(dirName, output)
 		try:
 			self.absoutput = '%s:%s' % (urlGrab(self.parser.url, self.absoutput,
