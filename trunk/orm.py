@@ -76,7 +76,9 @@ except: pass
 # FIXME: windows compatibility
 outfd = sys.stderr
 def log(msg):
-	outfd.write(msg + '\n')
+	# we have to cast some type ('instance',
+	# the error message from an exception), to print it
+	outfd.write(str(msg) + '\n')
 
 # see http://www.nedbatchelder.com/blog/200410.html#e20041003T074926
 def _functionId(nFramesUp):
@@ -352,17 +354,13 @@ class podcastHandler:
 
 	def downloadContent(self):
 		if self.error: return
-		
-                ext = '.mp3'
-                if self.parser.contentType == 'audio/mpeg':
-                        ext = '.mp3'
-                if self.parser.contentType == 'video/mp4':
-                        ext = '.mp4'
+
+		exts = {'audio/mpeg': '.mp3', 'video/mp4': '.mp4'}
+		ext = exts.get(self.parser.contentType, '.mp3')
                 
 		dirName = os.path.join(self.prefix, self.filenamePrefix)
 		if self.verbose: log('downloading[%s] %s\n' % (self.filenamePrefix, self.parser.url))
-		output = self.filenamePrefix + '-' + time.strftime('%Y-%m-%d',
-                self.parser.lastDate) + ext
+		output = self.filenamePrefix + '-' + time.strftime('%Y-%m-%d', self.parser.lastDate) + ext
 		self.absoutput = os.path.join(dirName, output)
 		try:
 			self.absoutput = '%s:%s' % (urlGrab(self.parser.url, self.absoutput,
