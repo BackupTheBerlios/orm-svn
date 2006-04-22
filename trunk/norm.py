@@ -46,6 +46,7 @@ import os
 import time
 import select
 import signal
+import orm
 
 # ------------------------------------------
 try: import locale; locale.setlocale(locale.LC_ALL, "")
@@ -378,13 +379,20 @@ class DownloadListWindow(ListWindow):
         self.keymap.bind('l', self.listPodCasts, ())
         self.keymap.bind(['\n', curses.KEY_ENTER],
                          self.toggleDownload, ())
-        import orm
+
         self.settings = orm.settings()
         self.downloaders = []
 
         for f, url in self.settings.podcasts.iteritems():
             self.downloaders.append(orm.podcastHandler(self.settings.prefix,
-                                                       f, url, False))
+                                                       f, url, self.transferProgressHook, False))
+
+    def transferProgressHook(self, curbytes, total):
+        self.buffer[self.bufptr] = "Hello"
+        self.buffer[self.bufptr] = 'Progress: %s/%s' % (orm.format_number(curbytes),
+                                                        orm.format_number(total))
+        self.updateWin()
+
     # HERE
     def toggleDownload(self):
         downloader = self.downloaders[self.bufptr]

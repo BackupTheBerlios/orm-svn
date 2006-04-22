@@ -155,14 +155,6 @@ def format_number(number, SI=0, space=' '):
 
 	return(format % (number, space, symbols[depth]))
 
-def transferProgressHook(curbytes, total):
-	if curbytes > total:
-		sys.stderr.write('\rProgress: %s/%s\r' % (format_number(total), format_number(total)))
-	else:
-		sys.stderr.write('\rProgress: %s/%s' % (format_number(curbytes), format_number(total)))
-		sys.stderr.flush()
-		sys.stderr.write('\r' + ' ' * 80)
-
 class myURLOpener(urllib.FancyURLopener):
     """Create sub-class in order to overide error 206.  This error means a
        partial file is being sent,
@@ -174,7 +166,7 @@ class myURLOpener(urllib.FancyURLopener):
 class UrlGrabError(Exception):
 	pass
 
-def urlGrab(url, dlFile, progressfunction = transferProgressHook, verbose = True):
+def urlGrab(url, dlFile, progressfunction, verbose = True):
 	loop = 1
 	
 	existSize = 0
@@ -310,12 +302,22 @@ class dateSortedMp3Lister(SGMLParser):
 			        self.curLastDate = dateObjFromString(text)
                         except (dateObjFromStringError):
                                 self.curLastDate = dateSortedMp3Lister.DC
+
+def transferProgressHook(curbytes, total):
+	if curbytes > total:
+		sys.stderr.write('\rProgress: %s/%s\r' % (format_number(total), format_number(total)))
+	else:
+		sys.stderr.write('\rProgress: %s/%s' % (format_number(curbytes), format_number(total)))
+		sys.stderr.flush()
+		sys.stderr.write('\r' + ' ' * 80)
+
 class podcastHandler:
 
-	def __init__(self, prefix, filenamePrefix, podurl, verbose = True):
+	def __init__(self, prefix, filenamePrefix, podurl, transferProgressHook, verbose = True):
 		self.verbose = verbose
 		self.prefix = prefix
 		self.filenamePrefix = filenamePrefix
+		self.transferProgressHook = transferProgressHook
 		self.podurl = podurl
 		self.error = False
 		self.errorMsg = ""
@@ -364,7 +366,7 @@ class podcastHandler:
 		self.absoutput = os.path.join(dirName, output)
 		try:
 			self.absoutput = '%s:%s' % (urlGrab(self.parser.url, self.absoutput,
-							    transferProgressHook, self.verbose),
+							    self.transferProgressHook, self.verbose),
 						    self.absoutput)
 			
 		except UrlGrabError, error:
@@ -432,7 +434,7 @@ if __name__ == "__main__":
 				except OSError, error:
 					raise SettingsError, "%s\nCannot create %s" % (error, dirName)
 
-			downloader = podcastHandler(s.prefix, f, url, verbose)
+			downloader = podcastHandler(s.prefix, f, url, transferProgressHook, verbose)
 			downloader.download()
 			if not downloader.error:
 				print downloader.absoutput
