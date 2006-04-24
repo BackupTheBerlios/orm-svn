@@ -207,7 +207,8 @@ def urlGrab(url, dlFile, progressfunction, verbose = True):
 				break
 			outputFile.write(data)
 			numBytes = numBytes + len(data)
-			progressfunction(numBytes, totalSize)
+			if callable(progressfunction):
+				progressfunction(numBytes, totalSize)
 
 	except UrlCheckError, error:
 		errorMsg = 'urlGrab: Cannot fetch podcast media: %s\n' % (error)
@@ -357,7 +358,7 @@ class podcastHandler:
 	def downloadContent(self):
 		if self.error: return
 
-		exts = {'audio/mpeg': '.mp3', 'video/mp4': '.mp4'}
+		exts = {'audio/mpeg': '.mp3', 'video/mp4': '.mp4', 'video/mov': '.m4v'}
 		ext = exts.get(self.parser.contentType, '.mp3')
                 
 		dirName = os.path.join(self.prefix, self.filenamePrefix)

@@ -59,6 +59,7 @@ podcasts = dict(
 #coffe='http://radiofrance-podcast.net/podcast/rss_10031.xml',
 #fouduroi='http://radiofrance-podcast.net/podcast/rss_10048.xml',
 #leplustot='http://radiofrance-podcast.net/podcast/rss_10030.xml',
+#nike='http://nikefootball.nike.com/nikefootball/podcast/nikefootball.xml',
 
 test='http://marge1/~bsergean/pod.xml',
 #test2='http://marge1/~bsergean/pod2.xml',

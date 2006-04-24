@@ -33,7 +33,7 @@
 # plug orm to a cplay-based curses interface
 #*****************************************************************************
 
-__version__ = "norm 0.0"
+__version__ = "norm 0.1"
 
 from types import *
 
@@ -47,6 +47,7 @@ import time
 import select
 import signal
 import orm
+from threading import Thread
 
 # ------------------------------------------
 try: import locale; locale.setlocale(locale.LC_ALL, "")
@@ -372,6 +373,27 @@ class ListWindow(Window):
         self.update()
 
 # ------------------------------------------
+class downloaderThread(Thread):
+    def __init__ (self, ph, widget, bufptr):
+        Thread.__init__(self)
+        self.ph = ph
+        self.ph.transferProgressHook = self.transferProgressHook
+        self.widget = widget
+        self.bufptr = bufptr
+        
+    def run(self):
+        self.widget.buffer[self.bufptr] = "fetch podcast and read it"
+        self.widget.updateWin()
+        self.ph.download()
+        self.widget.buffer[self.bufptr] = '%s downloaded' % (self.ph.filenamePrefix)
+        self.widget.updateWin()
+
+    def transferProgressHook(self, curbytes, total):
+        self.widget.buffer[self.bufptr] = 'Progress: %s/%s' % (orm.format_number(curbytes),
+                                                               orm.format_number(total))
+        self.widget.updateWin()
+
+# ------------------------------------------
 class DownloadListWindow(ListWindow):
 
     def __init__(self, parent):
@@ -382,26 +404,35 @@ class DownloadListWindow(ListWindow):
 
         self.settings = orm.settings()
         self.downloaders = []
+        self.downloaderThreads = []        
+        self.currentDownloads = []
 
         for f, url in self.settings.podcasts.iteritems():
-            self.downloaders.append(orm.podcastHandler(self.settings.prefix,
-                                                       f, url, self.transferProgressHook, False))
+            # create the podcast dir
+            dirName = os.path.join(self.settings.prefix, f)
 
-    def transferProgressHook(self, curbytes, total):
-        self.buffer[self.bufptr] = "Hello"
-        self.buffer[self.bufptr] = 'Progress: %s/%s' % (orm.format_number(curbytes),
-                                                        orm.format_number(total))
-        self.updateWin()
+            if not os.path.exists(dirName):
+                try:
+                    os.makedirs(dirName)
+                except OSError, error:
+                    raise SettingsError, "%s\nCannot create %s" % (error, dirName)
+
+            downloader = orm.podcastHandler(self.settings.prefix,
+                                            f, url, None, False)
+            self.downloaders.append(downloader)
+            self.downloaderThreads.append(downloaderThread(downloader,
+                                                           self, self.bufptr))
 
     # HERE
     def toggleDownload(self):
         downloader = self.downloaders[self.bufptr]
-        app.status('Currently downloading %s' % (downloader.filenamePrefix))
-        self.buffer[self.bufptr] = "fetch podcast and read it"
-        self.updateWin()
-        downloader.download()
-        self.buffer[self.bufptr] = "downloaded !!"
-        self.updateWin()
+        self.currentDownloads.append(downloader.filenamePrefix)
+        app.status('Downloading %s' % (' '.join(self.currentDownloads)))
+
+        thread = self.downloaderThreads[self.bufptr]
+        if not thread.isAlive():
+            thread.start()
+            self.currentDownloads.remove(downloader.filenamePrefix)
 
     def updateWin(self):
         self.parent.update_title()
