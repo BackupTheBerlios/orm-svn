@@ -9,35 +9,17 @@
 #
 #*****************************************************************************
 #
-#  Copyright (c) 2006 Benjamin Sergeant (bsergean at gmail dot com)
-#
-#  progress bar code stolen from yum:
-#  http://linux.duke.edu/projects/yum/
-#
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2, as
-#  published by the Free Software Foundation.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+# See LICENSE file for licensing and to see where does some code come from
 #
 #*****************************************************************************
-
-#*****************************************************************************
-# standalone podcast downloader
+# !! orm podcatcher !!
 # the name is taken from 'On Refaiiiiiiiiiit le match sur RTL'
-# tested on Linux with python 2.4 but should work with older versions
+# norm.py needs python 2.4
+# orm.py should work with old python
 #
 # Features:
 # - if file already exists dont download it
 # - fetch several podcast
-# - dont create anything on your disk apart from the downloaded podcasts
 #
 # Todo:
 # - plug to GNUPod
@@ -46,18 +28,21 @@
 #
 # To import the new podcast:
 
+# - Unit Testing.
+#     Create a test.py file, a make test directive, put rss files with link on local dummy file:///files in
+#     a test dir.
+#     Get http server code from /usr/lib/python2.4/pydoc.py to start a webserver.
 # - multiple date parsing schemes
-# - write file tag
+# - write file mp3 tag
 # - error handling
-# - detect extension file (.aac ?) for creating the correct filename
-# - dont work if there are several podcast the same day
-# - create a thread for each download (progress method then ?)
+# - dont work if there are several podcast the same day => just add hour:minutes to the filename
+# - create a thread for each download (see norm.py)
 # - print server information
 # - bad xml should yield errors
 #
 # Bugs:
-# - When download is canceled by KeyInterupt the message 'filename' saved is
-#   printed
+# - Missing features ?
+# - and others, send me an email (see LICENSE)
 #*****************************************************************************
 
 __version__ = "orm 0.1"
@@ -73,12 +58,16 @@ import urllib2
 try: import locale; locale.setlocale(locale.LC_ALL, "")
 except: pass
 
-# FIXME: windows compatibility
-outfd = sys.stderr
+if sys.platform == 'win32':
+	outfd = open('C:/tmp/message', 'w')
+else:
+	outfd = sys.stderr
+	outfd = open('/tmp/message', 'w')
 def log(msg):
 	# we have to cast some type ('instance',
 	# the error message from an exception), to print it
 	outfd.write(str(msg) + '\n')
+	outfd.flush()
 
 # see http://www.nedbatchelder.com/blog/200410.html#e20041003T074926
 def _functionId(nFramesUp):
@@ -358,8 +347,18 @@ class podcastHandler:
 	def downloadContent(self):
 		if self.error: return
 
-		exts = {'audio/mpeg': '.mp3', 'video/mp4': '.mp4', 'video/mov': '.m4v'}
-		ext = exts.get(self.parser.contentType, '.mp3')
+		# we try with the file extension:
+		import urlparse
+		path = urlparse.urlparse(self.parser.url)[2]
+		ext = os.path.splitext(path)[1]
+		if not len(ext):
+			# try with mime: guess_extension returns None when it fails
+			import mimetypes
+			ext = mimetypes.guess_extension(self.parser.contentType)
+			if not ext:
+				# we fall back to our set of extension
+				exts = {'audio/mpeg': '.mp3', 'video/mp4': '.mp4', 'video/mov': '.m4v'}
+				ext = exts.get(self.parser.contentType, '.mp3') # there's only pirated music on the web :)
                 
 		dirName = os.path.join(self.prefix, self.filenamePrefix)
 		if self.verbose: log('downloading[%s] %s\n' % (self.filenamePrefix, self.parser.url))

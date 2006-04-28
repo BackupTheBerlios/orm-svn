@@ -9,28 +9,12 @@
 #
 #*****************************************************************************
 #
-#  Copyright (c) 2006 Benjamin Sergeant (bsergean at gmail dot com)
+# See LICENSE file for licensing and to see where does some code come from
 #
-#  progress bar code stolen from yum:
-#  http://linux.duke.edu/projects/yum/
-#
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2, as
-#  published by the Free Software Foundation.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-#
-#*****************************************************************************
-
 #*****************************************************************************
 # plug orm to a cplay-based curses interface
+# should work on most Unixes (tested on Mac, Solaris and Linux)
+# should work on Windows with Cygnus curses
 #*****************************************************************************
 
 __version__ = "norm 0.1"
@@ -46,15 +30,17 @@ import os
 import time
 import select
 import signal
+import threading
+
 import orm
-from threading import Thread
 
 # ------------------------------------------
 try: import locale; locale.setlocale(locale.LC_ALL, "")
 except: pass
 
 # ------------------------------------------
-_locale_domain = "cplay"
+# FIXME: Add i18n
+_locale_domain = "norm"
 _locale_dir = "/usr/local/share/locale"
 
 try:
@@ -75,7 +61,7 @@ except:
 XTERM = re.search("rxvt|xterm", os.environ["TERM"])
 
 # ------------------------------------------
-out = '/tmp/orm.log'
+out = '/tmp/norm.log'
 outfd = open(out, 'w')
 def log(msg):
     outfd.write(msg + '\n')
@@ -373,25 +359,29 @@ class ListWindow(Window):
         self.update()
 
 # ------------------------------------------
-class downloaderThread(Thread):
-    def __init__ (self, ph, widget, bufptr):
-        Thread.__init__(self)
-        self.ph = ph
-        self.ph.transferProgressHook = self.transferProgressHook
-        self.widget = widget
-        self.bufptr = bufptr
-        
-    def run(self):
-        self.widget.buffer[self.bufptr] = "fetch podcast and read it"
-        self.widget.updateWin()
-        self.ph.download()
-        self.widget.buffer[self.bufptr] = '%s downloaded' % (self.ph.filenamePrefix)
-        self.widget.updateWin()
+# http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/302088
+# pydoc _threading_local')
 
-    def transferProgressHook(self, curbytes, total):
-        self.widget.buffer[self.bufptr] = 'Progress: %s/%s' % (orm.format_number(curbytes),
-                                                               orm.format_number(total))
-        self.widget.updateWin()
+def run(ph, widget, bufptr):
+    # tld: thread local data
+    tld = threading.local()
+    tld.ph = ph
+    tld.widget = widget
+    tld.bufptr = bufptr
+
+    def transferProgressHook(curbytes, total):
+        tld.widget.buffer[tld.bufptr] = 'Progress: %s/%s' % \
+        (orm.format_number(curbytes),
+         orm.format_number(total))
+
+        tld.widget.updateWin()
+
+    tld.ph.transferProgressHook = transferProgressHook
+    tld.widget.buffer[tld.bufptr] = "fetch podcast and read it (please wait)"
+    tld.widget.updateWin()
+    tld.ph.download()
+    tld.widget.buffer[tld.bufptr] = '%s downloaded' % (tld.ph.filenamePrefix)
+    tld.widget.updateWin()
 
 # ------------------------------------------
 class DownloadListWindow(ListWindow):
@@ -404,10 +394,11 @@ class DownloadListWindow(ListWindow):
 
         self.settings = orm.settings()
         self.downloaders = []
-        self.downloaderThreads = []        
         self.currentDownloads = []
-
-        for f, url in self.settings.podcasts.iteritems():
+        self.downloaderThreads = []
+  
+        for (f, url), i in zip(self.settings.podcasts.iteritems(),
+                               range(0, len(self.settings.podcasts))):
             # create the podcast dir
             dirName = os.path.join(self.settings.prefix, f)
 
@@ -420,19 +411,23 @@ class DownloadListWindow(ListWindow):
             downloader = orm.podcastHandler(self.settings.prefix,
                                             f, url, None, False)
             self.downloaders.append(downloader)
-            self.downloaderThreads.append(downloaderThread(downloader,
-                                                           self, self.bufptr))
+            t = threading.Thread(target=run,
+                                 args=[downloader, self, i])
+            t.setDaemon(False)
+            self.downloaderThreads.append(t)
 
     # HERE
-    def toggleDownload(self):
+    def toggleDownload(self):        
         downloader = self.downloaders[self.bufptr]
-        self.currentDownloads.append(downloader.filenamePrefix)
-        app.status('Downloading %s' % (' '.join(self.currentDownloads)))
+        if not downloader.filenamePrefix in self.currentDownloads:
+            self.currentDownloads.append(downloader.filenamePrefix)
+        app.status('Downloading %s' % (str(self.currentDownloads)))
+
+        orm.log('toggleDownload %s' % (downloader.filenamePrefix))
 
         thread = self.downloaderThreads[self.bufptr]
         if not thread.isAlive():
             thread.start()
-            self.currentDownloads.remove(downloader.filenamePrefix)
 
     def updateWin(self):
         self.parent.update_title()
@@ -455,6 +450,9 @@ class HelpWindow(ListWindow):
         self.name = _("Help")
         self.keymap.bind('q', self.parent.help, ())
         self.buffer = string.split(_("""\
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!! This is not up to date : needs to be written (updated fro cplay) !!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   Global                               t, T  : tag current/regex
   ------                               u, U  : untag current/regex
   Up, Down, k, j, C-p, C-n,            Sp, i : invert current/all
@@ -604,6 +602,14 @@ class Application:
         self.timeout = Timeout()
         
     def cleanup(self):
+        # FIXME: stop running threads: Add another callback to UrlGrab to stop it ?
+        # commented
+        #pod = self.win_podlist
+        #orm.log('cleanup start')
+        #for thread in pod.downloaderThreads:
+        #    orm.log(thread.tld.bufptr)
+        #orm.log('cleanup done')
+        
         try: curses.endwin()
         except curses.error: return
         XTERM and sys.stderr.write("\033]0;%s\a" % "xterm")

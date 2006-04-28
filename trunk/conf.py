@@ -8,6 +8,10 @@
 #  $Date: 2006-04-07 23:02:21 -0700 (Fri, 07 Apr 2006) $
 #
 #*****************************************************************************
+#
+# See LICENSE file for licensing and to see where does some code come from
+#
+#*****************************************************************************
 # prefix is the directory prefix for the future downloaded media
 # it can also be set with the ORMDIR env variable
 # with bash: export ORMPREFIX=/home/mp3
