@@ -324,6 +324,7 @@ class podcastHandler:
 
 			# sed
 			html = htmlFD.read()
+			# FIXME: bug here, we should have html = html.replace
 			html.replace('pubDate','pubdate')
 			htmlFD.close()
 		
